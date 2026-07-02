@@ -401,12 +401,12 @@
     <h2>Install the extension</h2>
 
     <p style="color: var(--faint); margin-bottom: 22px;">The easiest way is the Chrome Web Store — one click and you're listening.</p>
-    <p><a class="btn primary" id="storeBtn2" href="https://chromewebstore.google.com/detail/world-ambient/faoccgggjigedmefkbkecakdnjpoibep" data-store>Add to Chrome — Web Store</a></p>
+    <p><a class="btn primary" id="storeBtn2" href="#" data-store>Add to Chrome — Web Store</a></p>
 
-    <div class="note" id="storeNote"> You can install manually — it takes about a minute:</div>
+    <div class="note" id="storeNote">The Web Store listing is being reviewed. Until it's live, you can install manually — it takes about a minute:</div>
 
     <ol class="steps" style="margin-top: 22px;">
-      <li><strong>Download the extension</strong> <span>— grab the latest <code>world-ambient.zip</code> from the <a href="https://github.com/citoreh/world-ambient/releases" id="releaseLink">releases page</a> and unzip it somewhere it can stay.</span></li>
+      <li><strong>Download the extension</strong> <span>— grab the latest <code>world-ambient.zip</code> from the <a href="https://github.com/YOUR_USERNAME/world-ambient/releases" id="releaseLink">releases page</a> and unzip it somewhere it can stay.</span></li>
       <li><strong>Open the extensions page</strong> <span>— type <code>chrome://extensions</code> in the address bar.</span></li>
       <li><strong>Turn on Developer mode</strong> <span>— the toggle in the top-right corner.</span></li>
       <li><strong>Load unpacked</strong> <span>— click the button and select the unzipped <code>world-ambient</code> folder.</span></li>
@@ -414,6 +414,8 @@
     </ol>
 
     <div class="note">Works in Chrome and Chromium-based browsers (Edge, Brave, Arc, Opera) that support Manifest V3 extensions.</div>
+
+    <div class="note"><strong style="color: var(--mist); font-weight: 500;">Seeing a "not trusted by Enhanced Safe Browsing" notice?</strong> That's Chrome's standard message for extensions from newer developer accounts — Google grants "trusted" status automatically after a publisher has a few months of clean history, and about a quarter of all Web Store extensions currently show it. It isn't a security finding about World Ambient: the extension passed Chrome Web Store review, collects no data, and its full source is on GitHub. Click "Continue to install" to proceed.</div>
   </section>
 
   <!-- ============ HOW ============ -->
@@ -486,8 +488,8 @@
   });
 
   // ==== EDIT THESE TWO LINES when publishing ====
-  const WEB_STORE_URL = "https://chromewebstore.google.com/detail/world-ambient/faoccgggjigedmefkbkecakdnjpoibep?authuser=0&hl=en-GB";   // paste your Chrome Web Store listing URL here once approved
-  const GITHUB_REPO   = "https://github.com/citoreh/world-ambient";
+  const WEB_STORE_URL = "";   // paste your Chrome Web Store listing URL here once approved
+  const GITHUB_REPO   = "https://github.com/YOUR_USERNAME/world-ambient";
 
   // Wire up links
   document.querySelectorAll("[data-repo], #repoLink").forEach((a) => (a.href = GITHUB_REPO));
@@ -498,7 +500,7 @@
     document.getElementById("storeBtn").href = WEB_STORE_URL;
     document.getElementById("storeNote").hidden = true;
   } else {
-    storeButtons.forEach((b) => { b.style.opacity = 0.55; b.addEventListener("click", (e) => e.preventDefault()); b.textContent = "Web Store"; });
+    storeButtons.forEach((b) => { b.style.opacity = 0.55; b.addEventListener("click", (e) => e.preventDefault()); b.textContent = "Web Store — coming soon"; });
   }
 </script>
 </body>
