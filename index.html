@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Ambient — an ambient music player for Chrome</title>
+<meta name="description" content="World Ambient is a Chrome extension that plays curated ambient playlists while you browse. Pick a mood, press play, drift.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Public+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14121F;
+    --horizon: #1F1A33;
+    --raised: #262040;
+    --mist: #CFC8E4;
+    --faint: #837CA0;
+    --dawn: #E8B77E;
+    --dawn-ink: #241A0E;
+    --sea: #6FB5A8;
+    --line: rgba(207, 200, 228, 0.12);
+    --display: "Fraunces", Georgia, serif;
+    --body: "Public Sans", -apple-system, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ink);
+    color: var(--mist);
+    font-family: var(--body);
+    font-weight: 300;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--dawn); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--dawn); outline-offset: 3px; border-radius: 4px; }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 500;
+  }
+
+  /* ============ hero ============ */
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: grid;
+    place-items: center;
+    padding: 72px 24px 64px;
+    overflow: hidden;
+    background:
+      radial-gradient(90% 60% at 50% -8%, rgba(111, 181, 168, 0.10), transparent 60%),
+      radial-gradient(110% 70% at 50% 112%, rgba(232, 183, 126, 0.09), transparent 55%),
+      var(--ink);
+  }
+
+  .hero-orb {
+    position: absolute;
+    width: min(72vh, 560px);
+    height: min(72vh, 560px);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -54%);
+    background:
+      radial-gradient(circle at 32% 30%, rgba(232, 183, 126, 0.32), transparent 48%),
+      radial-gradient(circle at 70% 72%, rgba(111, 181, 168, 0.26), transparent 52%),
+      radial-gradient(circle at 50% 50%, #241E3E 0%, transparent 74%);
+    filter: blur(2px);
+    animation: breathe 9s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: translate(-50%, -54%) scale(1); opacity: 0.85; }
+    50%      { transform: translate(-50%, -54%) scale(1.06); opacity: 1; }
+  }
+
+  .hero-inner {
+    position: relative;
+    display: grid;
+    gap: 44px;
+    justify-items: center;
+    text-align: center;
+    max-width: 720px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 340;
+    font-size: clamp(42px, 7.5vw, 76px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--mist);
+  }
+  h1 em {
+    font-style: italic;
+    font-weight: 380;
+    color: var(--dawn);
+  }
+  .hero p.lede {
+    max-width: 480px;
+    color: var(--faint);
+    font-size: 18px;
+  }
+
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-block;
+    font-weight: 500;
+    font-size: 15px;
+    border-radius: 999px;
+    padding: 13px 28px;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn.primary { background: var(--dawn); color: var(--dawn-ink); }
+  .btn.primary:hover { filter: brightness(1.07); text-decoration: none; }
+  .btn.ghost { border-color: var(--line); color: var(--mist); }
+  .btn.ghost:hover { border-color: var(--dawn); color: var(--dawn); text-decoration: none; }
+
+  /* ============ player replica (the signature) ============ */
+  .player-demo { display: grid; gap: 14px; justify-items: center; }
+  .demo-hint { font-size: 12px; color: var(--faint); letter-spacing: 0.14em; text-transform: uppercase; }
+
+  .replica {
+    width: 320px;
+    text-align: left;
+    border-radius: 20px;
+    border: 1px solid var(--r-line);
+    padding: 16px 18px 14px;
+    background:
+      radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--r-glow-b) 14%, transparent), transparent 60%),
+      radial-gradient(120% 80% at 50% 115%, color-mix(in srgb, var(--r-glow-a) 12%, transparent), transparent 55%),
+      var(--r-ink);
+    color: var(--r-mist);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    transition: background 300ms ease, color 300ms ease, border-color 300ms ease;
+    font-size: 13px;
+  }
+  /* replica skins */
+  .replica[data-skin="dusk"]   { --r-ink:#14121F; --r-panel:#1F1A33; --r-mist:#CFC8E4; --r-faint:#837CA0; --r-accent:#E8B77E; --r-accent-ink:#241A0E; --r-glow-a:rgba(232,183,126,.85); --r-glow-b:rgba(111,181,168,.65); --r-line:rgba(207,200,228,.14); }
+  .replica[data-skin="dawn"]   { --r-ink:#F5EFE4; --r-panel:#EBE2D2; --r-mist:#453A50; --r-faint:#8B7F96; --r-accent:#C4703B; --r-accent-ink:#FFF6EA; --r-glow-a:rgba(196,112,59,.75); --r-glow-b:rgba(94,155,141,.6); --r-line:rgba(69,58,80,.18); }
+  .replica[data-skin="forest"] { --r-ink:#0F1712; --r-panel:#1A2A1E; --r-mist:#D2E4D0; --r-faint:#7E9683; --r-accent:#D9B44A; --r-accent-ink:#201A05; --r-glow-a:rgba(217,180,74,.8); --r-glow-b:rgba(111,181,138,.65); --r-line:rgba(210,228,208,.14); }
+  .replica[data-skin="sea"]    { --r-ink:#0A131E; --r-panel:#142334; --r-mist:#C9DBEA; --r-faint:#6E86A0; --r-accent:#7FC4CF; --r-accent-ink:#06212A; --r-glow-a:rgba(127,196,207,.8); --r-glow-b:rgba(120,140,220,.5); --r-line:rgba(201,219,234,.14); }
+  .replica[data-skin="noir"]   { --r-ink:#101010; --r-panel:#1D1D1D; --r-mist:#E4E4E4; --r-faint:#8A8A8A; --r-accent:#F0F0F0; --r-accent-ink:#101010; --r-glow-a:rgba(240,240,240,.75); --r-glow-b:rgba(150,150,150,.45); --r-line:rgba(228,228,228,.16); }
+
+  .r-head { display: flex; align-items: center; gap: 9px; }
+  .r-orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 30%, var(--r-glow-a), transparent 52%),
+      radial-gradient(circle at 70% 72%, var(--r-glow-b), transparent 56%),
+      radial-gradient(circle at 50% 50%, var(--r-panel) 0%, var(--r-ink) 78%);
+    box-shadow: 0 0 0 1px var(--r-line);
+    animation: pulse 5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+  .r-wordmark { font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--r-faint); font-weight: 500; }
+
+  .r-now { text-align: center; margin-top: 16px; }
+  .r-now-label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--r-faint); }
+  .r-now-title { font-family: var(--display); font-style: italic; font-weight: 380; font-size: 19px; margin-top: 3px; }
+
+  .r-select {
+    margin-top: 14px;
+    background: var(--r-panel);
+    border: 1px solid var(--r-line);
+    border-radius: 10px;
+    padding: 9px 12px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--r-mist);
+  }
+  .r-select span:last-child { color: var(--r-faint); }
+
+  .r-transport {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--r-panel);
+    border: 1px solid var(--r-line);
+    border-radius: 999px;
+    padding: 6px 16px 6px 6px;
+  }
+  .r-play {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--r-accent);
+    display: grid; place-items: center;
+    color: var(--r-accent-ink);
+    flex: 0 0 36px;
+  }
+  .r-next { color: var(--r-faint); display: grid; place-items: center; width: 30px; flex: 0 0 30px; }
+  .r-slider { flex: 1; height: 3px; border-radius: 3px; background: color-mix(in srgb, var(--r-mist) 22%, transparent); position: relative; }
+  .r-slider::after {
+    content: ""; position: absolute; left: 62%; top: 50%;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--r-accent); transform: translate(-50%, -50%);
+  }
+
+  .r-skins { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+  .swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--r-line);
+    cursor: pointer;
+    transition: transform 100ms ease;
+    padding: 0;
+  }
+  .swatch:hover { transform: scale(1.18); }
+  .swatch.active { outline: 2px solid var(--r-accent); outline-offset: 2px; }
+  .swatch[data-skin="dusk"]   { background: linear-gradient(135deg, #E8B77E 30%, #1F1A33 70%); }
+  .swatch[data-skin="dawn"]   { background: linear-gradient(135deg, #C4703B 30%, #F5EFE4 70%); }
+  .swatch[data-skin="forest"] { background: linear-gradient(135deg, #D9B44A 30%, #1A2A1E 70%); }
+  .swatch[data-skin="sea"]    { background: linear-gradient(135deg, #7FC4CF 30%, #142334 70%); }
+  .swatch[data-skin="noir"]   { background: linear-gradient(135deg, #F0F0F0 30%, #1D1D1D 70%); }
+
+  /* ============ sections ============ */
+  main { max-width: 680px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 76px 0 0; }
+  section:last-of-type { padding-bottom: 40px; }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 32px;
+    line-height: 1.2;
+    margin: 10px 0 22px;
+    color: var(--mist);
+  }
+
+  .feature-list { display: grid; gap: 22px; margin-top: 6px; }
+  .feature h3 {
+    font-family: var(--display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--dawn);
+    margin-bottom: 4px;
+  }
+  .feature p { color: var(--faint); font-size: 16px; }
+
+  ol.steps { margin: 8px 0 0 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 16px; }
+  ol.steps li {
+    counter-increment: step;
+    padding: 16px 18px 16px 58px;
+    position: relative;
+    background: var(--horizon);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    font-size: 16px;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 18px; top: 50%;
+    transform: translateY(-50%);
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: var(--raised);
+    color: var(--dawn);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  ol.steps li strong { font-weight: 500; color: var(--mist); }
+  ol.steps li span { color: var(--faint); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.88em;
+    background: var(--raised);
+    border-radius: 6px;
+    padding: 2px 7px;
+    color: var(--sea);
+  }
+
+  .note {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-left: 2px solid var(--dawn);
+    background: var(--horizon);
+    border-radius: 0 12px 12px 0;
+    color: var(--faint);
+    font-size: 15px;
+  }
+
+  /* privacy */
+  .privacy p, .privacy li { color: var(--faint); font-size: 15.5px; }
+  .privacy ul { padding-left: 20px; margin-top: 8px; display: grid; gap: 8px; }
+  .privacy strong { color: var(--mist); font-weight: 500; }
+  .privacy h3 { font-size: 16px; font-weight: 500; color: var(--mist); margin: 20px 0 6px; }
+
+  footer {
+    margin-top: 80px;
+    padding: 32px 24px 44px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    color: var(--faint);
+    font-size: 13px;
+  }
+  footer .r-orb { display: inline-block; margin-bottom: 12px; animation: none;
+    --r-glow-a: rgba(232,183,126,.85); --r-glow-b: rgba(111,181,168,.65);
+    --r-panel: var(--horizon); --r-ink: var(--ink); --r-line: var(--line); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-orb, .r-orb { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+  @media (max-width: 420px) {
+    .replica { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-orb" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <p class="eyebrow">World Ambient · a Chrome extension</p>
+    <h1>Pick a mood.<br>Press play. <em>Drift.</em></h1>
+    <p class="lede">An ambient music player that lives in your browser toolbar — curated soundscapes that keep playing while you work, read, and wander.</p>
+    <div class="cta-row">
+      <a class="btn primary" id="storeBtn" href="#install">Add to Chrome</a>
+      <a class="btn ghost" href="#about">What is it?</a>
+    </div>
+
+    <!-- live player replica: try the skins -->
+    <div class="player-demo">
+      <div class="replica" data-skin="dusk" id="replica">
+        <div class="r-head">
+          <div class="r-orb"></div>
+          <span class="r-wordmark">World&nbsp;Ambient</span>
+        </div>
+        <div class="r-now">
+          <p class="r-now-label">Now drifting through</p>
+          <p class="r-now-title">Ambient Iran</p>
+        </div>
+        <div class="r-select"><span>Ambient Iran</span><span>▾</span></div>
+        <div class="r-transport">
+          <span class="r-play">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+          </span>
+          <span class="r-next">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          </span>
+          <span class="r-slider"></span>
+        </div>
+        <div class="r-skins" role="group" aria-label="Try a skin">
+          <button class="swatch active" data-skin="dusk" aria-label="Dusk skin"></button>
+          <button class="swatch" data-skin="dawn" aria-label="Dawn skin"></button>
+          <button class="swatch" data-skin="forest" aria-label="Forest skin"></button>
+          <button class="swatch" data-skin="sea" aria-label="Sea skin"></button>
+          <button class="swatch" data-skin="noir" aria-label="Noir skin"></button>
+        </div>
+      </div>
+      <p class="demo-hint">↑ try the skins</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ ABOUT ============ -->
+  <section id="about">
+    <p class="eyebrow">What it does</p>
+    <h2>One small player, tuned for atmosphere</h2>
+    <div class="feature-list">
+      <div class="feature">
+        <h3>Moods, not tracklists</h3>
+        <p>Each playlist is a place — choose it once and the player shuffles endlessly inside that mood. Every track plays before anything repeats, and it never drifts into another playlist uninvited.</p>
+      </div>
+      <div class="feature">
+        <h3>Keeps playing when you close it</h3>
+        <p>The popup is just the remote control. Close it, switch tabs, keep browsing — the sound continues until you pause it.</p>
+      </div>
+      <div class="feature">
+        <h3>Five skins</h3>
+        <p>Dusk, Dawn, Forest, Sea, and Noir. Dawn is the light one. Your choice is remembered.</p>
+      </div>
+      <div class="feature">
+        <h3>Quiet by design</h3>
+        <p>No accounts to create, no ads, no downloads, no tracking. Hover the player while listening to see the name of the current track.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSTALL ============ -->
+  <section id="install">
+    <p class="eyebrow">Get it</p>
+    <h2>Install the extension</h2>
+
+    <p style="color: var(--faint); margin-bottom: 22px;">The easiest way is the Chrome Web Store — one click and you're listening.</p>
+    <p><a class="btn primary" id="storeBtn2" href="#" data-store>Add to Chrome — Web Store</a></p>
+
+    <div class="note" id="storeNote">The Web Store listing is being reviewed. Until it's live, you can install manually — it takes about a minute:</div>
+
+    <ol class="steps" style="margin-top: 22px;">
+      <li><strong>Download the extension</strong> <span>— grab the latest <code>world-ambient.zip</code> from the <a href="https://github.com/YOUR_USERNAME/world-ambient/releases" id="releaseLink">releases page</a> and unzip it somewhere it can stay.</span></li>
+      <li><strong>Open the extensions page</strong> <span>— type <code>chrome://extensions</code> in the address bar.</span></li>
+      <li><strong>Turn on Developer mode</strong> <span>— the toggle in the top-right corner.</span></li>
+      <li><strong>Load unpacked</strong> <span>— click the button and select the unzipped <code>world-ambient</code> folder.</span></li>
+      <li><strong>Pin it</strong> <span>— click the puzzle-piece icon in the toolbar and pin World Ambient so it's always one click away.</span></li>
+    </ol>
+
+    <div class="note">Works in Chrome and Chromium-based browsers (Edge, Brave, Arc, Opera) that support Manifest V3 extensions.</div>
+  </section>
+
+  <!-- ============ HOW ============ -->
+  <section id="how">
+    <p class="eyebrow">Under the hood</p>
+    <h2>How it works</h2>
+    <div class="feature-list">
+      <div class="feature">
+        <h3>A living library</h3>
+        <p>Playlists live in a cloud database (Firebase Firestore), so new tracks and moods appear in your player automatically — no updates to install. Press the refresh icon in the player to pick up changes immediately.</p>
+      </div>
+      <div class="feature">
+        <h3>Streaming, not files</h3>
+        <p>Audio streams from a CDN while you listen. Nothing is saved to your computer, and there is no download option — by design.</p>
+      </div>
+      <div class="feature">
+        <h3>Light on your browser</h3>
+        <p>The player uses Chrome's offscreen audio system: one small hidden page handles the sound, and nothing runs when you're not listening.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRIVACY ============ -->
+  <section id="privacy" class="privacy">
+    <p class="eyebrow">Privacy policy</p>
+    <h2>What World Ambient knows about you: almost nothing</h2>
+
+    <p><strong>World Ambient does not collect, store, transmit, or sell any personal data.</strong> There are no analytics, no trackers, no ads, and no user accounts for listeners.</p>
+
+    <h3>What stays on your device</h3>
+    <ul>
+      <li>Your chosen playlist, volume level, and skin are saved in Chrome's local extension storage on your computer. They never leave your browser.</li>
+    </ul>
+
+    <h3>What the extension connects to</h3>
+    <ul>
+      <li><strong>Firebase Firestore</strong> (Google Cloud) — to read the public list of playlists and track URLs.</li>
+      <li><strong>Audio CDN</strong> (bunny.net) — to stream the audio you're listening to. Like any web request, these services receive your IP address in order to respond; the extension sends nothing else.</li>
+    </ul>
+
+    <h3>Permissions, explained</h3>
+    <ul>
+      <li><code>offscreen</code> — lets music keep playing after the popup closes.</li>
+      <li><code>storage</code> — remembers your playlist, volume, and skin.</li>
+      <li>Host access to Firestore and the audio CDN — fetches the playlist catalogue and the audio streams. Nothing is read from the pages you visit; the extension has no access to your browsing.</li>
+    </ul>
+
+    <h3>Changes</h3>
+    <p>If this policy ever changes, the update will be posted on this page with a new date. Questions: open an issue on the <a href="https://github.com/YOUR_USERNAME/world-ambient" id="repoLink">GitHub repository</a>.</p>
+    <p style="margin-top: 14px; font-size: 13px;">Last updated: July 2026</p>
+  </section>
+</main>
+
+<footer>
+  <div class="r-orb" aria-hidden="true"></div>
+  <p>World Ambient · made with care for slow afternoons</p>
+  <p style="margin-top: 6px;"><a href="#install">Install</a> · <a href="#privacy">Privacy</a> · <a href="https://github.com/YOUR_USERNAME/world-ambient" data-repo>GitHub</a></p>
+</footer>
+
+<script>
+  // Skin switcher for the hero replica
+  const replica = document.getElementById("replica");
+  document.querySelectorAll(".swatch").forEach((b) => {
+    b.addEventListener("click", () => {
+      replica.dataset.skin = b.dataset.skin;
+      document.querySelectorAll(".swatch").forEach((x) =>
+        x.classList.toggle("active", x.dataset.skin === b.dataset.skin)
+      );
+    });
+  });
+
+  // ==== EDIT THESE TWO LINES when publishing ====
+  const WEB_STORE_URL = "";   // paste your Chrome Web Store listing URL here once approved
+  const GITHUB_REPO   = "https://github.com/YOUR_USERNAME/world-ambient";
+
+  // Wire up links
+  document.querySelectorAll("[data-repo], #repoLink").forEach((a) => (a.href = GITHUB_REPO));
+  document.getElementById("releaseLink").href = GITHUB_REPO + "/releases";
+  const storeButtons = [document.getElementById("storeBtn2")];
+  if (WEB_STORE_URL) {
+    storeButtons.forEach((b) => (b.href = WEB_STORE_URL));
+    document.getElementById("storeBtn").href = WEB_STORE_URL;
+    document.getElementById("storeNote").hidden = true;
+  } else {
+    storeButtons.forEach((b) => { b.style.opacity = 0.55; b.addEventListener("click", (e) => e.preventDefault()); b.textContent = "Web Store — coming soon"; });
+  }
+</script>
+</body>
+</html>
